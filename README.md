@@ -6,14 +6,7 @@ _Original code by [@KrzysztofHajdamowicz](https://github.com/KrzysztofHajdamowic
 
 ## Install and usage
 - Install it with [HACS](https://hacs.xyz/)
-- Add the configuration to `configuration.yaml`, example:
-
-```yaml
-vacuum:
-  - platform: viomi_vacuum_v8
-    host: 192.168.0.105
-    token: !secret viomi_vacuum_v8_token
-    name: 'Viomi Vacuum V8'
-```
+- In Home Assistant, go to **Settings → Devices & services → Add integration** and search for **Viomi Vacuum V8**.
+- Enter the vacuum's IP address, 32-character token, and an optional name when prompted.
 
 Services described in the `services.yaml`.

@@ -1,0 +1,21 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to Viomi Vacuum V8",
+        "description": "Enter the vacuum's network details. The token must be 32 characters.",
+        "data": {
+          "host": "IP address or hostname",
+          "token": "Token",
+          "name": "Name"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Unable to connect to the vacuum. Check the host and token, then try again."
+    },
+    "abort": {
+      "already_configured": "This vacuum is already configured."
+    }
+  }
+}

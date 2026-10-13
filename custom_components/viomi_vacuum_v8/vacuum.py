@@ -7,7 +7,6 @@ from miio import DeviceException, ViomiVacuum  # pylint: disable=import-error
 import voluptuous as vol
 
 from homeassistant.components.vacuum import (
-    PLATFORM_SCHEMA,
     StateVacuumEntity,
     VacuumActivity,
     VacuumEntityFeature,
@@ -20,20 +19,11 @@ from homeassistant.const import (
 )
 import homeassistant.helpers.config_validation as cv
 
+from .const import DEFAULT_NAME, DOMAIN
+
 _LOGGER = logging.getLogger(__name__)
 
-DEFAULT_NAME = "Viomi Vacuum V8"
-DOMAIN = "viomi_vacuum_v8"
-DATA_KEY = "viomi_vacuum_v8"
-
-PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
-    {
-        vol.Required(CONF_HOST): cv.string,
-        vol.Required(CONF_TOKEN): vol.All(cv.string, vol.Length(min=32, max=32)),
-        vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
-    },
-    extra=vol.ALLOW_EXTRA,
-)
+DATA_KEY = DOMAIN
 
 SERVICE_CLEAN_ZONE = "clean_zone"
 SERVICE_CLEAN_AREA = "clean_area"
@@ -181,34 +171,31 @@ VACUUM_CARD_PROPS_REFERENCES = {
     'cleaning_time': 's_time'
 }
 
-async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
-    """Set up the Viomi Vacuum V8 robot platform."""
-    if DATA_KEY not in hass.data:
-        hass.data[DATA_KEY] = {}
+async def async_setup_entry(hass, entry, async_add_entities):
+    """Set up a configured Viomi Vacuum V8."""
+    hass.data.setdefault(DATA_KEY, {})
 
-    host = config[CONF_HOST]
-    token = config[CONF_TOKEN]
-    name = config[CONF_NAME]
+    host = entry.data[CONF_HOST]
+    token = entry.data[CONF_TOKEN]
+    name = entry.data.get(CONF_NAME, DEFAULT_NAME)
 
-    # Create handler
-    _LOGGER.info("Initializing with host %s (token %s...)", host, token[:5])
-
+    _LOGGER.info("Initializing with host %s", host)
     vacuum = ViomiVacuum(host, token)
-    device = ViomiVacuumEntity(name, vacuum)
-    hass.data[DATA_KEY][host] = device
-
+    device = ViomiVacuumEntity(name, vacuum, entry.unique_id)
+    hass.data[DATA_KEY][entry.entry_id] = device
     async_add_entities([device], update_before_add=True)
 
     async def async_service_handler(service):
         """Map services to methods on Viomi Vacuum V8."""
-        method = SERVICE_TO_METHOD.get(service.service)
+        method = SERVICE_TO_METHOD[service.service]
         params = service.data.copy()
-        entity_ids = params.pop(ATTR_ENTITY_ID, hass.data[DATA_KEY].values())
-        update_tasks = []
+        entity_ids = params.pop(ATTR_ENTITY_ID, None)
+        devices = hass.data[DATA_KEY].values()
+        if entity_ids is not None:
+            devices = [device for device in devices if device.entity_id in entity_ids]
 
-        for device in filter(
-            lambda x: x.entity_id in entity_ids, hass.data[DATA_KEY].values()
-        ):
+        update_tasks = []
+        for device in devices:
             if not hasattr(device, method["method"]):
                 continue
             await getattr(device, method["method"])(**params)
@@ -217,22 +204,25 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
         if update_tasks:
             await asyncio.wait(update_tasks)
 
-    for vacuum_service in SERVICE_TO_METHOD:
-        schema = SERVICE_TO_METHOD[vacuum_service].get(
-            "schema", VACUUM_SERVICE_SCHEMA
-        )
+    for vacuum_service, service_config in SERVICE_TO_METHOD.items():
+        if hass.services.has_service(DOMAIN, vacuum_service):
+            continue
         hass.services.async_register(
-            DOMAIN, vacuum_service, async_service_handler, schema=schema
+            DOMAIN,
+            vacuum_service,
+            async_service_handler,
+            schema=service_config.get("schema", VACUUM_SERVICE_SCHEMA),
         )
 
 
 class ViomiVacuumEntity(StateVacuumEntity):
     """Representation of a Viomi Vacuum V8 robot."""
 
-    def __init__(self, name, vacuum):
+    def __init__(self, name, vacuum, unique_id):
         """Initialize the device handler."""
         self._name = name
         self._vacuum = vacuum
+        self._attr_unique_id = unique_id
 
         self._last_clean_point = None
 
