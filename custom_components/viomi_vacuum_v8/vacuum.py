@@ -124,7 +124,6 @@ SUPPORT_VIOMI = (
     | VacuumEntityFeature.FAN_SPEED
     | VacuumEntityFeature.LOCATE
     | VacuumEntityFeature.SEND_COMMAND
-    | VacuumEntityFeature.BATTERY
     | VacuumEntityFeature.START
 )
 
