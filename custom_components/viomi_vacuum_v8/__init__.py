@@ -3,6 +3,8 @@
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
+# Load the platform at integration import time, before entry setup runs in the event loop.
+from . import vacuum  # noqa: F401
 from .const import DOMAIN, PLATFORMS
 
 
